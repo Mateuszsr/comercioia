@@ -2,9 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Anthropic from "@anthropic-ai/sdk";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -24,17 +21,26 @@ Dados atuais do negócio:
 ${JSON.stringify(context, null, 2)}`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: "user", content: message }],
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: message }],
+      }),
     });
 
-    const text = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as any).text)
-      .join("");
+    const data = await response.json();
+    const text = data.content
+      ?.filter((b: any) => b.type === "text")
+      .map((b: any) => b.text)
+      .join("") || "Erro ao processar resposta.";
 
     return NextResponse.json({ text });
   } catch (e: any) {
