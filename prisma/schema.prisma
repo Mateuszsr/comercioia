@@ -1,0 +1,70 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("generic") // pizzaria, mercadinho, salao, generic
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  sales     Sale[]
+  products  Product[]
+  clients   Client[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  price       Float
+  stock       Int      @default(0)
+  minStock    Int      @default(5)
+  storeId     String
+  createdAt   DateTime @default(now())
+
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  saleItems   SaleItem[]
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  storeId   String
+  createdAt DateTime @default(now())
+
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+}
+
+model Sale {
+  id        String     @id @default(cuid())
+  total     Float
+  storeId   String
+  clientId  String?
+  createdAt DateTime   @default(now())
+
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  client    Client?    @relation(fields: [clientId], references: [id])
+  items     SaleItem[]
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Int
+  price     Float
+
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
